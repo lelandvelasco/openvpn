@@ -19,3 +19,6 @@ Steps on deploying on Azure
     - in the adminUsername and publicKeys, replace it with the keyvault resourceId you created at step 3.
     - provide networkRG for your vNet
     - you can enable or disable autoshutdown
+    
+    
+**Note: Provide values for solutionName, RoleName and DTAP this is for naming of your Azure Resources**
