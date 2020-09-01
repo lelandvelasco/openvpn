@@ -1,0 +1,218 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "solutionName": {
+            "type": "string",
+            "metadata": {
+                "description": "The code of the solutionName this resource will be used for"
+            },
+            "maxLength": 4
+        },
+        "roleName": {
+            "type": "string",
+            "metadata": {
+                "description": "Enter the role name to describe the server functionality"
+            },
+            "maxLength": 4
+        },
+        "dtapName": {
+            "type": "string",
+            "metadata": {
+                "description": "The code of the environment this resource will be used in"
+            },
+            "maxLength": 1
+        },
+        "regionName": {
+            "type": "string",
+            "metadata": {
+                "description": "The region this resource will be deployed in"
+            },
+            "maxLength": 3
+        },
+        "vNetName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the existing VNet that you want to use"
+            }
+        },
+        "vNetRG": {
+            "type": "string",
+            "metadata": {
+                "description": "Enter the name of the existing VNet Resource Group that you want to use"
+            }
+        },
+        "subnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the existing subnet that you want to use"
+            }
+        },
+        "virtualMachineSize": {
+            "type": "string",
+            "metadata": {
+                "description": "The size of the virtual machines to deploy"
+            }
+        },
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "The username for the local Administrator account"
+            }
+        },
+        "publicKeys": {
+            "type": "securestring",
+            "metadata": {
+                "description": "public key to be use"
+            }
+        },
+        "deployAutoShutdown": {
+            "type": "bool",
+            "metadata": {
+                "description": "Enable Autoshutdown"
+            }
+        },
+        "autoShutDownSettings": {
+            "type": "object",
+            "metadata": {
+                "description": "Auto Shutdown Settings"
+            }
+        }
+    },
+    "variables": {
+        "vmName": "[concat(parameters('regionName'),parameters('solutionName'),'-',parameters('roleName'),parameters('dtapName'))]",
+        "nicName": "[concat(variables('vmName'),'-Nic')]",
+        "pipName": "[concat(variables('vmName'),'-Pip')]"
+    },
+    "resources": [
+        {
+            "name": "[variables('pipName')]",
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "2019-02-01",
+            "location": "[resourceGroup().location]",
+            "tags": "[resourceGroup().tags]",
+            "properties": {
+                "publicIpAllocationMethod": "Dynamic",
+                "dnsSettings": {
+                    "domainNameLabel": "[concat(parameters('solutionName'), parameters('roleName'), parameters('dtapName'))]"
+                }
+            },
+            "sku": {
+                "name": "Basic"
+            }
+        },
+        {
+            "name": "[variables('nicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2019-07-01",
+            "location": "[resourceGroup().location]",
+            "tags": "[resourceGroup().tags]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIpAddresses/', variables('pipName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId(parameters('vNetRG'),'Microsoft.Network/virtualNetworks/subnets',parameters('vnetName'),parameters('subnetName'))]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses', variables('pipName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('vmName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2019-07-01",
+            "location": "[resourceGroup().location]",
+            "tags": "[resourceGroup().tags]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('virtualMachineSize')]"
+                },
+                "storageProfile": {
+                    "osDisk": {
+                        "createOption": "fromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Premium_LRS"
+                        }
+                    },
+                    "imageReference": {
+                        "publisher": "openvpn",
+                        "offer": "openvpnas",
+                        "sku": "access_server_byol",
+                        "version": "latest"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "computerName": "[variables('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": true,
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+                                    "keyData": "[parameters('publicKeys')]"
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "plan": {
+                "name": "access_server_byol",
+                "publisher": "openvpn",
+                "product": "openvpnas"
+            }
+        },
+        {
+            "condition": "[parameters('deployAutoShutdown')]",
+            "name": "[concat('shutdown-computevm-', variables('vmName'))]",
+            "type": "Microsoft.DevTestLab/schedules",
+            "apiVersion": "2017-04-26-preview",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+            ],
+            "properties": {
+                "status": "[parameters('autoShutDownSettings').status]",
+                "taskType": "ComputeVmShutdownTask",
+                "dailyRecurrence": {
+                    "time": "[parameters('autoShutDownSettings').time]"
+                },
+                "timeZoneId": "[parameters('autoShutDownSettings').timeZoneId]",
+                "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
+                "notificationSettings": {
+                    "status": "[parameters('autoShutDownSettings').status]",
+                    "notificationLocale": "[parameters('autoShutDownSettings').notificationLocale]",
+                    "timeInMinutes": "30",
+                    "emailRecipient": "[parameters('autoShutDownSettings').emailRecipient]"
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "adminUsername": {
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        }
+    }
+}

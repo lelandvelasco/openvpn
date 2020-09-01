@@ -1,0 +1,94 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "solutionName": {
+            "value": "vpn",
+            "metadata": {
+                "description": "The code of the solutionName this resource will be used for"
+            }
+        },
+        "roleName": {
+            "value": "acc",
+            "metadata": {
+                "description": "Enter the role name to describe the server functionality"
+            }
+        },
+        "dtapName": {
+            "value": "t",
+            "metadata": {
+                "description": "The code of the environment this resource will be used in"
+            }
+        },
+        "regionName": {
+            "value": "cus",
+            "metadata": {
+                "description": "The region this resource will be deployed in"
+            }
+        },
+        "vNetName": {
+            "value": "cus-network-vnet-t",
+            "metadata": {
+                "description": "The name of the existing VNet that you want to use"
+            }
+        },
+        "vNetRG": {
+            "value": "cus-network-rg-t",
+            "metadata": {
+                "description": "Enter the name of the existing VNet Resource Group that you want to use"
+            }
+        },
+        "subnetName": {
+            "value": "testfrontend",
+            "metadata": {
+                "description": "The name of the existing subnet that you want to use"
+            }
+        },
+        "virtualMachineSize": {
+            "value": "Standard_B1s",
+            "metadata": {
+                "description": "The size of the virtual machines to deploy"
+            }
+        },
+        "adminUsername": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/5952e2e3-a71e-47dd-abe8-db5c8d400d11/resourceGroups/cus-security-rg-t/providers/Microsoft.KeyVault/vaults/cus-lvvadmin-keyvault-t"
+                },
+                "secretName": "linuxadmin"
+            },
+            "metadata": {
+                "description": "The username for the local Administrator account"
+            }
+        },
+        "publicKeys": {
+            "reference": {
+                "keyVault": {
+                    "id": "/subscriptions/5952e2e3-a71e-47dd-abe8-db5c8d400d11/resourceGroups/cus-security-rg-t/providers/Microsoft.KeyVault/vaults/cus-lvvadmin-keyvault-t"
+                },
+                "secretName": "openvpnkey"
+            },
+            "metadata": {
+                "description": "public key to be use"
+            }
+        },
+        "deployAutoShutdown": {
+            "value": true,
+            "metadata": {
+                "description": "Enable Autoshutdown"
+            }
+        },
+        "autoShutDownSettings": {
+            "value": {
+                "status": "Enabled",
+                "time": "19:00",
+                "timezoneId": "Singapore Standard Time",
+                "notificationLocale": "en",
+                "emailRecipient": ""
+            },
+            "metadata": {
+                "description": "Auto Shutdown Settings(status, time, timezoneId, notificationLocale, emailRecipient)"
+            }
+        }
+    }
+}
