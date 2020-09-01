@@ -15,25 +15,25 @@
             }
         },
         "dtapName": {
-            "value": "t",
+            "value": "",
             "metadata": {
                 "description": "The code of the environment this resource will be used in"
             }
         },
         "regionName": {
-            "value": "cus",
+            "value": "",
             "metadata": {
                 "description": "The region this resource will be deployed in"
             }
         },
         "vNetName": {
-            "value": "cus-network-vnet-t",
+            "value": "",
             "metadata": {
                 "description": "The name of the existing VNet that you want to use"
             }
         },
         "vNetRG": {
-            "value": "cus-network-rg-t",
+            "value": "",
             "metadata": {
                 "description": "Enter the name of the existing VNet Resource Group that you want to use"
             }
@@ -53,7 +53,7 @@
         "adminUsername": {
             "reference": {
                 "keyVault": {
-                    "id": "/subscriptions/5952e2e3-a71e-47dd-abe8-db5c8d400d11/resourceGroups/cus-security-rg-t/providers/Microsoft.KeyVault/vaults/cus-lvvadmin-keyvault-t"
+                    "id": "/keyvault/resourceId/go/here"
                 },
                 "secretName": "linuxadmin"
             },
@@ -64,7 +64,7 @@
         "publicKeys": {
             "reference": {
                 "keyVault": {
-                    "id": "/subscriptions/5952e2e3-a71e-47dd-abe8-db5c8d400d11/resourceGroups/cus-security-rg-t/providers/Microsoft.KeyVault/vaults/cus-lvvadmin-keyvault-t"
+                    "id": "/keyvault/resourceId/go/here"
                 },
                 "secretName": "openvpnkey"
             },
@@ -84,7 +84,7 @@
                 "time": "19:00",
                 "timezoneId": "Singapore Standard Time",
                 "notificationLocale": "en",
-                "emailRecipient": ""
+                "emailRecipient": "your email address"
             },
             "metadata": {
                 "description": "Auto Shutdown Settings(status, time, timezoneId, notificationLocale, emailRecipient)"
