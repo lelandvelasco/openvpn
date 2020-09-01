@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "solutionName": {
+        "value": "rmt"
+      },
+      "dtapName": {
+        "value": "t"
+      },
+      "regionName": {
+        "value": "cus"
+      },
+      "vnetRGName": {
+        "value": "cus-network-rg-t"
+      },
+      "vnetName": {
+        "value": "cus-network-vnet-t"
+      }
+    }
+  }

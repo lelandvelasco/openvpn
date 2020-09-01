@@ -1,0 +1,85 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "solutionName": {
+      "type": "string",
+      "metadata": {
+        "description": "The code of the solutionName this resource will be used for"
+      },
+      "maxLength": 4
+    },
+    "dtapName": {
+      "type": "string",
+      "metadata": {
+        "description": "The code of the environment this resource will be used in"
+      },
+      "maxLength": 1
+    },
+    "regionName": {
+      "type": "string",
+      "metadata": {
+        "description": "The region this resource will be deployed in"
+      },
+      "maxLength": 3
+    },
+    "vnetRGName": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource Group name of the existing vnet which Azure Bastion should be deployed"
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of existing vnet to which Azure Bastion should be deployed"
+      }
+    }
+  },
+  "variables": {
+    "bastion-host-name": "[concat(parameters('regionName'),parameters('solutionName'),'-bastion-',parameters('dtapName'))]",
+    "public-ip-address-name": "[concat(variables('bastion-host-name'),'-Pip')]",
+    "bastionSubnetName": "AzureBastionSubnet"
+  },
+  "resources": [
+      {
+          "apiVersion": "2020-05-01",
+          "type": "Microsoft.Network/publicIpAddresses",
+          "name": "[variables('public-ip-address-name')]",
+          "location": "[resourceGroup().location]",
+          "tags": "[resourceGroup().tags]",
+          "sku": {
+              "name": "Standard"
+          },
+          "properties": {
+              "publicIPAllocationMethod": "Static"
+          }
+      },
+      {
+          "apiVersion": "2019-09-01",
+          "type": "Microsoft.Network/bastionHosts",
+          "name": "[variables('bastion-host-name')]",
+          "location": "[resourceGroup().location]",
+          "tags": "[resourceGroup().tags]",
+          "dependsOn": [
+              "[resourceId('Microsoft.Network/publicIpAddresses', variables('public-ip-address-name'))]"
+          ],
+          "properties": {
+              "ipConfigurations": [
+                  {
+                      "name": "IpConf",
+                      "properties": {
+                          "subnet": {
+                              "id": "[resourceId(parameters('vnetRGName'),'Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), variables('bastionSubnetName'))]"
+                          },
+                          "publicIPAddress": {
+                              "id": "[resourceId('Microsoft.Network/publicIpAddresses', variables('public-ip-address-name'))]"
+                          }
+                      }
+                  }
+              ]
+          }
+      }
+  ],
+  "outputs": {}
+}
