@@ -1,0 +1,233 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "solutionName": {
+      "type": "string",
+      "metadata": {
+        "description": "The code of the solution this resource will be used for"
+      }
+    },
+    "dtapName": {
+      "type": "string",
+      "metadata": {
+        "description": "The code of the environment this resource will be used in"
+      },
+      "maxLength": 1
+    },
+    "regionName": {
+      "type": "string",
+      "metadata": {
+        "description": "The region this resource will be deployed in"
+      },
+      "maxLength": 3
+    },
+    "vNetPrefix": {
+      "type": "array",
+      "metadata": {
+        "description": "The AddressSpace that contains an array of IP address ranges that can be used by subnets."
+      }
+    },
+    "vNetDnsServers": {
+      "type": "array",
+      "metadata": {
+        "description": "Array of DNS Servers to be used by the vNet. When none are specified, Azure DNS is used."
+      }
+    },
+    "vNetConfig": {
+      "type": "array",
+      "metadata": {
+        "description": "Array of the subnets and Gateway configuration."
+      }
+    },
+    "gateway": {
+      "type": "object",
+      "metadata": {
+        "description": "VPN gateway object"
+      }
+    },
+    "asgName": {
+      "type": "array",
+      "metadata": {
+        "description": "Application Security Group Sets"
+      }
+    }
+  },
+  "variables": {
+    "vNetName": "[toLower(concat(parameters('regionName'),'-',parameters('solutionName'),'-vnet-',parameters('dtapName')))]",
+    "gatewayPIPName": "[toLower(concat(parameters('regionName'),'-',parameters('solutionName'),'-vpngwpip-',parameters('dtapName')))]",
+    "gatewayName": "[toLower(concat(parameters('regionName'),'-',parameters('solutionName'),'-vpngw-',parameters('dtapName')))]",
+    "copy": [
+      {
+        "name": "subnetArray",
+        "count": "[length(parameters('vNetConfig'))]",
+        "input": {
+          "name": "[parameters('vNetConfig')[copyIndex('subnetArray')].name]",
+          "properties": {
+            "addressPrefix": "[parameters('vNetConfig')[copyIndex('subnetArray')].addressPrefix]",
+            "networkSecurityGroup": {
+              "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('regionName'),'-',parameters('solutionName'),'-vnet-',parameters('dtapName'), '-', parameters('vnetConfig')[copyIndex('subnetArray')].name, '-nsg'))]"
+            },
+            "serviceEndpoints": "[parameters('vnetConfig')[copyIndex('subnetArray')].serviceEndpoints]",
+			"privateEndpointNetworkPolicies": "[parameters('vNetConfig')[copyIndex('subnetArray')].privateEndpointNetworkPolicies]",
+			"privateLinkServiceNetworkPolicies": "[parameters('vNetConfig')[copyIndex('subnetArray')].privateLinkServiceNetworkPolicies]",
+            "routeTable": "[if(greater(length(parameters('vnetConfig')[copyIndex('subnetArray')].routeTableRules),0), json(concat( '{\"id\": \"', resourceId('Microsoft.Network/routeTables', concat(variables('vNetName'), '-', parameters('vnetConfig')[copyIndex('subnetArray')].name, '-rt')), '\"}')), json('null') )]"
+          }
+        }
+      }
+    ],
+    "gatewaySubnet": [
+      {
+        "name": "GatewaySubnet",
+        "properties": {
+          "addressPrefix": "[parameters('gateway').gatewayAddressPrefix]"
+        }
+      }
+    ],
+    "sharedKey": "[concat(uniqueString(resourceGroup().id,uniqueString(subscription().subscriptionId)))]"
+  },
+  "resources": [
+    {
+    "condition": "[greaterOrEquals(length(parameters('asgName')),1)]",
+    "apiVersion": "2017-10-01",
+    "type": "Microsoft.Network/applicationSecurityGroups",
+    "name": "[if(greaterOrEquals(length(parameters('asgName')),1),concat(parameters('asgName')[copyIndex()],'-asg'),'null')]",
+    "location": "[resourceGroup().location]",
+    "tags": "[resourceGroup().tags]",
+    "copy": {
+      "name": "asgLoop",
+      "count": "[length(parameters('asgName'))]"
+    },
+    "properties": {}
+    },
+    {
+      "condition": "[greater(length(parameters('vnetConfig')[copyIndex('routeTableLoop')].routeTableRules),0)]",
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat('routeTableDeploy',copyIndex('routeTableLoop',1))]",
+      "apiVersion": "2017-05-10",
+      "resourceGroup": "[resourceGroup().name]",
+      "copy": {
+        "name": "routeTableLoop",
+        "count": "[length(parameters('vnetConfig'))]"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "type": "Microsoft.Network/routeTables",
+              "name": "[concat(variables('vNetName'), '-', parameters('vnetConfig')[copyIndex('routeTableLoop')].name, '-rt')]",
+              "apiVersion": "2018-02-01",
+              "location": "[resourceGroup().location]",
+              "properties": {
+                "disableBgpRoutePropagation": false,
+                "copy": [
+                  {
+                    "name": "routes",
+                    "count": "[if(greater(length(parameters('vnetConfig')[copyIndex('routeTableLoop')].routeTableRules),0),length(parameters('vnetConfig')[copyIndex('routeTableLoop')].routeTableRules),1)]",
+                    "input": {
+                      "name": "[parameters('vnetConfig')[copyIndex('routeTableLoop')].routeTableRules[copyIndex('routes')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('vnetConfig')[copyIndex('routeTableLoop')].routeTableRules[copyIndex('routes')].addressPrefix]",
+                        "nextHopType": "[parameters('vnetConfig')[copyIndex('routeTableLoop')].routeTableRules[copyIndex('routes')].nextHopType]"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "[concat(variables('vNetName'), '-', parameters('vnetConfig')[copyIndex('nsg')].name, '-nsg')]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2017-09-01",
+      "dependsOn": [
+        "asgLoop"
+      ],
+      "copy": {
+        "name": "nsg",
+        "count": "[length(parameters('vnetConfig'))]"
+      },
+      "properties": {
+        "securityRules": "[parameters('vnetConfig')[copyIndex('nsg')].securityRules]"
+      }
+    },
+    {
+      "name": "[variables('vNetName')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2017-10-01",
+      "dependsOn": [
+        "nsg",
+        "routeTableLoop"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": "[parameters('vNetPrefix')]"
+        },
+        "dhcpOptions": {
+          "dnsServers": "[parameters('vNetDnsServers')]"
+        },
+        "subnets": "[if(parameters('gateway').enabled,concat(variables('subnetArray'),variables('gatewaySubnet')),variables('subnetArray'))]"
+      }
+    },
+    {
+      "condition": "[parameters('gateway').enabled]",
+      "apiVersion": "2017-10-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('gatewayPIPName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic"
+      }
+    },
+    {
+      "condition": "[parameters('gateway').enabled]",
+      "apiVersion": "2017-10-01",
+      "type": "Microsoft.Network/virtualNetworkGateways",
+      "name": "[variables('gatewayName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('gatewayPIPName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vNetName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'GatewaySubnet')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('gatewayPIPName'))]"
+              }
+            },
+            "name": "vnetGatewayConfig"
+          }
+        ],
+        "sku": {
+          "name": "[parameters('gateway').gatewaySku]",
+          "tier": "[parameters('gateway').gatewaySku]"
+        },
+        "gatewayType": "[parameters('gateway').gatewayType]"
+      }
+    }
+  ],
+  "outputs": {
+    "vnetID": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('vNetName'))]"
+    },
+    "sharedKey": {
+      "type": "string",
+      "value": "[variables('sharedKey')]"
+    }
+  }
+}
