@@ -9,13 +9,13 @@
         "value": "t"
       },
       "regionName": {
-        "value": "cus"
+        "value": ""
       },
       "vnetRGName": {
-        "value": "cus-network-rg-t"
+        "value": ""
       },
       "vnetName": {
-        "value": "cus-network-vnet-t"
+        "value": ""
       }
     }
   }
