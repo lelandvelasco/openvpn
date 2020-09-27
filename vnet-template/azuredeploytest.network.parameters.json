@@ -232,7 +232,7 @@
         "enabled": false,
         "gatewaySku": "Standard",
         "gatewayType": "ExpressRoute",
-        "gatewayAddressPrefix": "10.10.2.0/24"
+        "gatewayAddressPrefix": "10.97.2.0/24"
       }
     },
         "asgName": {
