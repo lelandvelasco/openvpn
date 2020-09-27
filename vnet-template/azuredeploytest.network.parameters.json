@@ -26,15 +26,7 @@
         {
           "name": "testfrontend",
           "addressPrefix": "10.97.10.0/24",
-          "serviceEndpoints": [
-			{
-				"service": "Microsoft.Storage",
-				"locations": [
-					"westeurope",
-					"northeurope"
-				]
-            }
-		  ],
+          "serviceEndpoints": [],
 		  "privateEndpointNetworkPolicies": "Disabled",
           "privateLinkServiceNetworkPolicies": "Disabled",
           "securityRules": [
@@ -53,10 +45,8 @@
                       "443"
                   ],
                   "sourceAddressPrefixes": [],
-                  "destinationAddressPrefixes": [
-                      "10.97.10.4",
-                      "40.113.217.89"
-                  ]
+		  "destinationAddressPrefix": "VirtualNetwork"
+                  "destinationAddressPrefixes": []
               }
             },
             {
