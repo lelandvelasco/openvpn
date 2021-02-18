@@ -27,7 +27,7 @@
           "name": "testfrontend",
           "addressPrefix": "10.97.10.0/24",
           "serviceEndpoints": [],
-		  "privateEndpointNetworkPolicies": "Disabled",
+	  "privateEndpointNetworkPolicies": "Disabled",
           "privateLinkServiceNetworkPolicies": "Disabled",
           "securityRules": [
             {
